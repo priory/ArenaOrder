@@ -1,0 +1,8 @@
+## Interface: 100207
+## Title: |cffFF0000Arena|r|cffFFFF00Order|r
+## Notes: Commands to replace @partyX conditionals order of macros.
+## Version: 0.1.0-poc
+## Author: Priory
+## IconTexture: 236336
+
+ArenaOrder.lua
