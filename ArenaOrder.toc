@@ -4,5 +4,6 @@
 ## Version: 0.1.0-poc
 ## Author: Priory
 ## IconTexture: 236336
+## SavedVariablesPerCharacter: AO
 
 ArenaOrder.lua
