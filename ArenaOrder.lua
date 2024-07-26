@@ -93,7 +93,7 @@ local function ProcessLine(line, unitN)
     end
 end
 
-local function ProcessMacro(macroSlot, targetIndex, partyIndex, unitN)
+local function ProcessMacro(macroSlot, unitN)
     local name, icon, body = GetMacroInfo(macroSlot)
 
     if (body == nil) then
@@ -104,8 +104,6 @@ local function ProcessMacro(macroSlot, targetIndex, partyIndex, unitN)
 
     for index = 1, #body do
         local c = body:byte(index)
-        local target = "@" .. unitN .. tostring(targetIndex)
-        local party = unitN .. tostring(partyIndex)
 
         if (c == 10) then
             e = index - 1
@@ -113,11 +111,15 @@ local function ProcessMacro(macroSlot, targetIndex, partyIndex, unitN)
 
             if (code == 2) then
                 return
-            end
+            elseif (code == 0) then
+                local i = tonumber(string.gsub(command, "^" .. unitN .. "([1-9][0-9]*)$", "%1"), 10)
 
-            if (code == 0 and command == party) then
-                body = string.gsub(body, "@" .. unitN .. "[1-9][0-9]*", "@" .. unitN .. targetIndex)
+                body = string.gsub(body, "@" .. unitN .. "[1-9][0-9]*", "@" .. unitN .. AO[unitN][i])
                 EditMacro(macroSlot, name, icon, body)
+            elseif (code == 1) then
+                -- continue
+            else
+                print("|cffFF0000Command was nil. Please contact the developer.|r")
             end
 
             s = e + 2
@@ -125,47 +127,35 @@ local function ProcessMacro(macroSlot, targetIndex, partyIndex, unitN)
     end
 end
 
-local function SwapUnitNConditionals(targetIndex, partyIndex, unitN)
+local function Sync(unitN)
     local macroCount = 120 + 18
 
     for i = 1, macroCount, 1 do
-        ProcessMacro(i, targetIndex, partyIndex, unitN)
+        ProcessMacro(i, unitN)
     end
-
-    local unitName, _ = UnitName(unitN .. targetIndex)
-
-    if (unitName == nil) then
-        unitName = "Unknown"
-    end
-
-    print("|cff00FF00Replaced #" ..
-        ADDON_NAME ..
-        " " ..
-        unitN ..
-        partyIndex ..
-        " macro conditions @" ..
-        unitN .. " with @" .. unitN .. targetIndex .. ". @" .. unitN .. targetIndex .. " is \"" .. unitName .. "\"|r")
 end
 
 local function cmd_Reset(msg, editbox)
     for i = 1, PARTY_SIZE - 1, 1 do
-        -- SwapUnitNConditionals(i, i, "party")
         AO["party"][i] = i
     end
 
+    Sync("party")
+
     for i = 1, PARTY_SIZE, 1 do
-        -- SwapUnitNConditionals(i, i, "arena")
         AO["arena"][i] = i
     end
 
-    -- print("|cff00FF00All @partyX and @arenaX conditions have been reset.|r")
+    Sync("arena")
+
+    print("|cff00FF00Party and arena conditionals have been reset.|r")
 end
 
-local function SwapIndicesFunc(a, b, unitN, func)
+local function SwapIndices(a, b, unitN)
     table.exchange(AO[unitN], a, b)
 end
 
-local function RotateIndicesFunc(a, b, unitN, func)
+local function RotateIndices(a, b, unitN)
     local target = a
     a = table.indexOf(AO[unitN], a)
 
@@ -258,7 +248,8 @@ local function cmd_Party(msg, editbox)
         return
     end
 
-    RotateIndicesFunc(targetIndex, partyIndex, "party", SwapUnitNConditionals)
+    RotateIndices(targetIndex, partyIndex, "party")
+    Sync("party")
 end
 
 local function cmd_Arena(msg, editbox)
@@ -294,7 +285,8 @@ local function cmd_Arena(msg, editbox)
         return
     end
 
-    RotateIndicesFunc(targetIndex, arenaIndex, "arena", SwapUnitNConditionals)
+    RotateIndices(targetIndex, arenaIndex, "arena")
+    Sync("arena")
 end
 local function cmd(msg, editbox)
     if (msg == "") then
@@ -334,6 +326,13 @@ local function cmd(msg, editbox)
 
     if (string.match(msg, "^a[1-9][0-9]* [1-9][0-9]*$") or string.match(msg, "^arena[1-9][0-9]* [1-9][0-9]*$")) then
         cmd_Arena(msg, editbox)
+        return
+    end
+
+    if (string.match(msg, "^sync$")) then
+        Sync("party")
+        Sync("arena")
+        print("|cff00FF00Party and arena have been synced.|r")
         return
     end
 
